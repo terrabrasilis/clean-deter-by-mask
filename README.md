@@ -14,11 +14,17 @@ Note: the entry point is start_process.sh script.
 
 ### Print SQLs
 
-To do this, edit the mode to true in the script_defines.sh script by changing the value of the ONLY_PRINT_SQL parameter.
+To do this, edit the mode to true in the script_defines.sh script by changing the value of the ONLY_PRINT_SQL parameter. Changing ONLY_PRINT_SQL to false does not disable printing, it allows the process to run but keeps printing the SQL script file.
 
  > ONLY_PRINT_SQL=true
 
 Then, run the entry point script.
+
+After that, consult the two new files generated in the root directory, along with these scripts.
+
+ > stack_trace_DD_MM_YYYY.log
+
+ > print_queries_DD_MM_YYYY.sql
 
 ### Apply mask
 
@@ -28,6 +34,12 @@ Follow the steps below to perform the process:
  - Verify if the backup of database is enable (edit the script_defines.sh);
  - Download the yearly_deforestation file of PRODES data;
  - Run the entry point script (start_process.sh).
+
+After that, consult the two new files generated in the root directory, along with these scripts.
+
+ > stack_trace_DD_MM_YYYY.log
+ 
+ > print_queries_DD_MM_YYYY.sql
 
 # Proposed flows
 
@@ -49,3 +61,5 @@ The third flow is a simple approach and consists of waiting for the next product
 This approach uses a strategy to flag removable data without removing. When this flagged data reaches the publication database, we move it to the history table and clear the flags.
 
 ![simple flow to publishing database](./doc/assets/simple_flow_on_publishing.jpg)
+
+To change this diagrams use the XML file "./doc/assets/DETER - apply mask.xml" and [diagrams.net](https://www.diagrams.net/) 12.9.9
