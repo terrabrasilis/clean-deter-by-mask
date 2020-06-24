@@ -1,6 +1,6 @@
 # Script MAIN option ==================================================
 # if the IS_PRODUCTION variable is true, the data will not be copied to the history table
-IS_PRODUCTION=false # used on production database
+IS_PRODUCTION=true # used on production database
 #IS_PRODUCTION=false # used on publishing database
 
 # If print mode is enabled, queries will not be executed
@@ -11,7 +11,8 @@ BACKUP_DB=true
 
 # Script defines =============================================
 export PGPASSWORD
-PG_CON="-d $PG_DATABASE -U $PG_USER -h $HOST -p $PG_PORT"
+PG_CON_BKP="-U $PG_USER -h $HOST -p $PG_PORT"
+PG_CON="-d $PG_DATABASE $PG_CON_BKP"
 PG_BIN="/usr/bin"
 BASE_DIR=$(pwd)
 ACT_DATE=$(date '+%d_%m_%y')

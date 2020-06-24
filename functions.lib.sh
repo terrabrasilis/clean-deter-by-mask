@@ -2,7 +2,7 @@
 backupDatabase(){
   if [[ $ONLY_PRINT_SQL = false ]] && [[ $BACKUP_DB = true ]]; then
     COMPRESSION="9"
-    BACKUP_OPTIONS="$PG_CON -b -C -F c -Z $COMPRESSION"
+    BACKUP_OPTIONS="$PG_CON_BKP -b -C -F c -Z $COMPRESSION"
     # backup
     echo $(date '+%c')" -- backing up database $PG_DATABASE" >> $LOGFILE
     if  $PG_BIN/pg_dump $BACKUP_OPTIONS -f $BASE_DIR/$PG_DATABASE-$ACT_DATE.backup $PG_DATABASE
@@ -37,7 +37,10 @@ importSHP(){
   SHP_DIR=$1
   SHP_NAME=$2
   SHP_NAME_AND_DIR="$SHP_DIR/$SHP_NAME.zip"
-  
+  if [ ! -f "$SHP_NAME_AND_DIR" ]; then
+    echo "The PRODES deforestation file is missing." >> $LOGFILE
+    exit 1
+  fi
   if [ $ONLY_PRINT_SQL = false ]; then
     unzip -o -d $SHP_DIR $SHP_NAME_AND_DIR
     SHP2PGSQL_OPTIONS="-c -s 4674:4674 -W 'LATIN1' -g geom"
@@ -48,7 +51,7 @@ importSHP(){
       rm $SHP_DIR/$SHP_NAME.{dbf,prj,shp,shx}
     else
       echo "Import ($SHP_NAME_AND_DIR) ... FAIL" >> $LOGFILE
-      exit
+      exit 1
     fi
   else
     echo "Print only is enable." >> $LOGFILE
