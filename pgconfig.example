@@ -1,0 +1,5 @@
+HOST="localhost"
+PG_PORT="5432"
+PG_USER="postgres"
+PG_DATABASE="<database_name>"
+PGPASSWORD='<secret>'
