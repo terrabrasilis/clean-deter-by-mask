@@ -1,13 +1,5 @@
 # Script MAIN option ==================================================
-# if the IS_PRODUCTION variable is true, the data will not be copied to the history table
-IS_PRODUCTION=true # used on production database
-#IS_PRODUCTION=false # used on publishing database
-
-# If print mode is enabled, queries will not be executed
-ONLY_PRINT_SQL=true
-
-# To disable database backup change this to false. If print mode is enable, backup is disable by default
-BACKUP_DB=true
+. ./options.sh
 
 # Script defines =============================================
 export PGPASSWORD

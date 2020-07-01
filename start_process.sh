@@ -1,47 +1,55 @@
 #!/bin/bash
+# To Database configurations, edit the pgconfig or create it based on pgconfig.example
 # Loading DB main configurations
 . ./db_main_conf.sh
-. ./db_queries.sh
 
 # Script defines =============================================
 . ./script_defines.sh
+. ./db_queries.sh
 
 # Script body ================================================
+# Use the BACKUP_DB on options.sh to change this behaviour
 # backup database before proceed
 backupDatabase
 
+# Use the ONLY_PRINT_SQL on options.sh to change this behaviour
 # unzip, import and clean deforestation data
 importSHP $BASE_DIR $SHP_PRODES
+
+# make valid geometries into TABLE_TO_CLEAN
 execQuery "$TABLE_TO_CLEAN_MAKE_VALID"
+# new table with removables by date from TABLE_TO_CLEAN
+execQuery "$REMOVABLE_TABLE"
+# Delete removables by date from TABLE_TO_CLEAN
+execQuery "$DELETE_BY_DATE"
+# To apart the intersect data between TABLE_TO_CLEAN and PRODES_TABLE
+execQuery "$CREATE_TEMP_CANDIDATE"
+# Delete removable candidates by intersect from TABLE_TO_CLEAN
+execQuery "$DELETE_BY_INTERSECT"
 
-if [ $IS_PRODUCTION = false ]; then
-# Publication script body (terrabrasilis only) ===============
-  # copy by date
-  execQuery "$HIST_COPY_BY_DATE"
-  # create tmp with intersection result
-  execQuery "$HIST_CREATE_TMP"
-  # delete by date
-  execQuery "$DELETE_BY_DATE"
-  # delete by intersect
-  execQuery "$DELETE_BY_INTERSECT"
+# make intersection with prodes
+execQuery "$INTER_CREATE"
+# copy by rule of area difference to removables table (use the AREA_RULE on options.sh to change this value)
+execQuery "$COPY_TO_REMOVABLES"
+# clean temporary table
+execQuery "$DELETE_FROM_TMP"
+# clean temporary intersection table
+execQuery "$DELETE_FROM_INTER_TMP"
+# make difference
+execQuery "$DIFF_CREATE"
 
-  # to send the result of intersection to history we should update the areas by LOIs (UF, MUN, UCs)
-  echo "WARNING: miss send the result of intersection to history table"
-  echo "Look for "$TABLE_TO_CLEAN"_inter_tmp"
+# -------------------------------------------------------
+# These two steps are necessary to copy data between
+# tables because the column names must be the same
+# -------------------------------------------------------
+# change column name to original name on difference table
+execQuery "$DIFF_FIX_GEOM_COL"
+# change column name to original name on intersection table
+execQuery "$INTER_FIX_GEOM_COL"
+# copy fraction by intersection to removables table
+# and fractions by difference to production table
+moveResultsToTargetTables
+# -------------------------------------------------------
 
-else
-# Script body production =====================================
-  # delete by date
-  execQuery "$DELETE_BY_DATE"
-  # make difference
-  execQuery "$DIFF_CREATE_TEMP"
-  execQuery "$DIFF_CREATE"
-  execQuery "$DIFF_FIX_GEOM_COL"
-  execQuery "$DIFF_UPDATE_AREA"
-  execQuery "$DIFF_DELETE_SMALLS"
-  # delete by intersect
-  execQuery "$DELETE_BY_INTERSECT"
-  # send difference back to production table 
-  execQuery "$COPY_DIFF"
-
-fi
+# drop intermediate tables
+#execQuery "$DROP_TMPS"
