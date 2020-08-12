@@ -2,9 +2,13 @@
 # To Database configurations, edit the pgconfig or create it based on pgconfig.example
 # Loading DB main configurations
 . ./db_main_conf.sh
-
+# Script MAIN option =========================================
+. ./options.sh
 # Script defines =============================================
 . ./script_defines.sh
+# Import functions ===========================================
+. ./functions.lib.sh
+# Import SQLs ================================================
 . ./db_queries.sh
 
 # Script body ================================================
@@ -14,7 +18,9 @@ backupDatabase
 
 # Use the ONLY_PRINT_SQL on options.sh to change this behaviour
 # unzip, import and clean deforestation data
+ONLY_PRINT_SQL=true
 importSHP $BASE_DIR $SHP_PRODES
+ONLY_PRINT_SQL=false
 
 # make valid geometries into TABLE_TO_CLEAN
 execQuery "$TABLE_TO_CLEAN_MAKE_VALID"
@@ -52,4 +58,5 @@ moveResultsToTargetTables
 # -------------------------------------------------------
 
 # drop intermediate tables
-#execQuery "$DROP_TMPS"
+ONLY_PRINT_SQL=true
+execQuery "$DROP_TMPS"

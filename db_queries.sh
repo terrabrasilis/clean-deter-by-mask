@@ -57,13 +57,14 @@ DELETE_FROM_TMP=$DELETE_FROM_TMP"DELETE FROM "$TABLE_TO_CLEAN"_tmp as tmp "
 DELETE_FROM_TMP=$DELETE_FROM_TMP"WHERE tmp.$TABLE_TO_CLEAN_KEY IN (SELECT * FROM list_of_removables);"
 
 # delete the removables by intersect from temporary intersection table
-DELETE_FROM_INTER_TMP="WITH list_of_removables AS ($SELECT_AREA_RULE) "
-DELETE_FROM_INTER_TMP=$DELETE_FROM_INTER_TMP"DELETE FROM "$TABLE_TO_CLEAN"_inter_tmp as tmp "
-DELETE_FROM_INTER_TMP=$DELETE_FROM_INTER_TMP"WHERE tmp.$TABLE_TO_CLEAN_KEY IN (SELECT * FROM list_of_removables);"
+DELETE_FROM_INTER_TMP="DELETE FROM "$TABLE_TO_CLEAN"_inter_tmp as tmp "
+DELETE_FROM_INTER_TMP=$DELETE_FROM_INTER_TMP"WHERE tmp.$TABLE_TO_CLEAN_KEY IN "
+DELETE_FROM_INTER_TMP=$DELETE_FROM_INTER_TMP"(SELECT $TABLE_TO_CLEAN_KEY FROM "$TABLE_TO_CLEAN"_removables);"
 
 # Make the difference between the temporary candidates table and temporary intersection table
 DIFF_CREATE="CREATE TABLE "$TABLE_TO_CLEAN"_diff_tmp AS SELECT tmp.*, "
-DIFF_CREATE=$DIFF_CREATE"ST_Multi(ST_CollectionExtract(ST_Difference(st_buffer(tmp.$GEOM_COLUMN,$BUFFER), st_buffer(inter.geom_inter,$BUFFER)), 3)) AS geom_diff "
+DIFF_CREATE=$DIFF_CREATE"ST_Multi(ST_CollectionExtract(ST_Difference(st_buffer(tmp.$GEOM_COLUMN,$BUFFER), "
+DIFF_CREATE=$DIFF_CREATE"st_buffer(inter.geom_inter,$BUFFER)), 3)) AS geom_diff "
 DIFF_CREATE=$DIFF_CREATE"FROM "$TABLE_TO_CLEAN"_tmp as tmp, "$TABLE_TO_CLEAN"_inter_tmp as inter "
 DIFF_CREATE=$DIFF_CREATE"WHERE tmp.$TABLE_TO_CLEAN_KEY = inter.$TABLE_TO_CLEAN_KEY;"
 

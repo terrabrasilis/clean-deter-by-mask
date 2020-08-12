@@ -46,31 +46,72 @@ moveResultsToTargetTables(){
     echo "$SQL"
   }
 
+  mountQueryFractions(){
+    # first parameter is class filter ("WHERE class_name IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')")
+    # second parameter is num fractions filter ("> 1")
+    SQL="WITH dumps AS ( "
+    SQL=$SQL"  SELECT object_id, (st_dump(ogr_geometry)).geom as geom_dum "
+    SQL=$SQL"  FROM sdr_alerta_diff_tmp $1 "
+    SQL=$SQL"), fractions AS ( "
+    SQL=$SQL"  SELECT object_id, COUNT(*) as num_fractions, SUM(st_area(geom_dum::geography))/10000 as area "
+    SQL=$SQL"  FROM dumps "
+    SQL=$SQL"  GROUP BY 1 "
+    SQL=$SQL"  ORDER BY 2 DESC "
+    SQL=$SQL") "
+    SQL=$SQL"SELECT $3 FROM sdr_alerta_tmp "
+    SQL=$SQL"WHERE EXISTS( "
+    SQL=$SQL"  SELECT object_id "
+    SQL=$SQL"  FROM fractions "
+    SQL=$SQL"  WHERE object_id=sdr_alerta_tmp.object_id "
+    SQL=$SQL"  AND num_fractions $2 "
+    SQL=$SQL")"
+    echo "$SQL"
+  }
+
   COLS_SQL=$(mountQueryCols "$TABLE_TO_CLEAN")
   # get table column to keep the column order
-  COLUMNS1=$(getColumns "$COLS_SQL")
+  TABLE_TO_CLEAN_COLS=$(getColumns "$COLS_SQL")
+
+  # criar tabela com poligonos de corte raso onde numero de frações de diferença é maior que 1 para virar mascara na producao
+  INPUT_DATA=$(mountQueryFractions "WHERE class_name IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" "> 1" "$TABLE_TO_CLEAN_COLS")
+  CREATE_MASK="CREATE TABLE $RESULT_MASK_TABLE AS $INPUT_DATA"
+  execQuery "$CREATE_MASK"
+
+  # criar lista de degradacoes que devem ficar na sdr_alerta (mais de uma fracao na tabela de diferenca - sdr_alerta_diff_tmp)
+  INPUT_DATA=$(mountQueryFractions "WHERE class_name NOT IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" "> 1" "$TABLE_TO_CLEAN_COLS")
+  RESTORE="INSERT INTO "$TABLE_TO_CLEAN" ($TABLE_TO_CLEAN_COLS) $INPUT_DATA"
+  execQuery "$RESTORE"
   
-  COLS_SQL=$(mountQueryCols "$TABLE_TO_CLEAN"_diff_tmp)
-  # get table column to keep the column order
-  COLUMNS2=$(getColumns "$COLS_SQL")
 
-  # copy the fractions of difference to TABLE_TO_CLEAN
-  INSERT_DIFFS="INSERT INTO "$TABLE_TO_CLEAN" ($COLUMNS1) SELECT $COLUMNS2 FROM "$TABLE_TO_CLEAN"_diff_tmp;"
-  # copy diffs to production table
-  execQuery "$INSERT_DIFFS"
-
+  # restante da diferenca vai para a tabela de removiveis e portanto para a de historico do TB
   COLS_SQL=$(mountQueryCols "$TABLE_TO_CLEAN"_removables)
   # get table column to keep the column order
   COLUMNS1=$(getColumns "$COLS_SQL")
-  
-  COLS_SQL=$(mountQueryCols "$TABLE_TO_CLEAN"_inter_tmp)
-  # get table column to keep the column order
-  COLUMNS2=$(getColumns "$COLS_SQL")
+  INPUT_DATA=$(mountQueryFractions "WHERE 1=1" "= 1" "$TABLE_TO_CLEAN_COLS")
+  MV_REMOVABLES="INSERT INTO "$TABLE_TO_CLEAN"_removables ($COLUMNS1) $INPUT_DATA"
+  execQuery "$MV_REMOVABLES"
 
-  # copy the fractions of intersect to removables table
-  INSERT_INTERS="INSERT INTO "$TABLE_TO_CLEAN"_removables ($COLUMNS1) SELECT $COLUMNS2 FROM "$TABLE_TO_CLEAN"_inter_tmp;"
-  # copy intersections to removables table
-  execQuery "$INSERT_INTERS"
+  # COLS_SQL=$(mountQueryCols "$TABLE_TO_CLEAN"_diff_tmp)
+  # # get table column to keep the column order
+  # COLUMNS2=$(getColumns "$COLS_SQL")
+
+  # # copy the fractions of difference to TABLE_TO_CLEAN
+  # INSERT_DIFFS="INSERT INTO "$TABLE_TO_CLEAN" ($COLUMNS1) SELECT $COLUMNS2 FROM "$TABLE_TO_CLEAN"_diff_tmp;"
+  # # copy diffs to production table
+  # execQuery "$INSERT_DIFFS"
+
+  # COLS_SQL=$(mountQueryCols "$TABLE_TO_CLEAN"_removables)
+  # # get table column to keep the column order
+  # COLUMNS1=$(getColumns "$COLS_SQL")
+  
+  # COLS_SQL=$(mountQueryCols "$TABLE_TO_CLEAN"_inter_tmp)
+  # # get table column to keep the column order
+  # COLUMNS2=$(getColumns "$COLS_SQL")
+
+  # # copy the fractions of intersect to removables table
+  # INSERT_INTERS="INSERT INTO "$TABLE_TO_CLEAN"_removables ($COLUMNS1) SELECT $COLUMNS2 FROM "$TABLE_TO_CLEAN"_inter_tmp;"
+  # # copy intersections to removables table
+  # execQuery "$INSERT_INTERS"
 }
 
 getColumns(){
@@ -80,8 +121,8 @@ getColumns(){
   echo "" >> "$SQLFILE"
 
   if [ $ONLY_PRINT_SQL = false ]; then
-    DATA=($($PG_BIN/psql $PG_CON -t -c "$PG_QUERY"))
-    echo "$DATA"
+    DATA=$($PG_BIN/psql $PG_CON -t -c "$PG_QUERY")
+    echo $DATA
   else
     echo "Print only is enable." >> $LOGFILE
   fi
