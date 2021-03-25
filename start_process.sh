@@ -18,9 +18,9 @@ backupDatabase
 
 # Use the ONLY_PRINT_SQL on options.sh to change this behaviour
 # unzip, import and clean deforestation data
-ONLY_PRINT_SQL=true
+#ONLY_PRINT_SQL=true
 importSHP $BASE_DIR $SHP_PRODES
-ONLY_PRINT_SQL=false
+#ONLY_PRINT_SQL=false
 
 # make valid geometries into TABLE_TO_CLEAN
 execQuery "$TABLE_TO_CLEAN_MAKE_VALID"
