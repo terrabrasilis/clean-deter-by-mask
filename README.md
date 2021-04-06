@@ -14,11 +14,13 @@ Note: the entry point is start_process.sh script.
 
 ### Print SQLs
 
-To do this, edit the mode to true in the script_defines.sh script by changing the value of the ONLY_PRINT_SQL parameter. Changing ONLY_PRINT_SQL to false does not disable printing, it allows the process to run but keeps printing the SQL script file.
+To do this, edit the mode to true in the options.sh script by changing the value of the ONLY_PRINT_SQL parameter. Changing ONLY_PRINT_SQL to false does not disable printing, it allows the process to run but keeps printing the SQL script file.
 
  > ONLY_PRINT_SQL=true
 
 Then, run the entry point script.
+
+ATTENTION: when the print mode is enabled, some queries will be printed incomplete because it depends on the metadata read from the SGDB for the target table, therefore, some queries are printed without the column names.
 
 After that, consult the two new files generated in the root directory, along with these scripts.
 
