@@ -10,5 +10,6 @@ BACKUP_DB=false
 # It's necessary to avoid the issues of st_intersection and st_difference
 BUFFER="0.000000001"
 
-# Area rule to remove (3 ha).
-AREA_RULE="3"
+# Area percentage rule for applying policies based on fractions of difference.
+DIFF_RULE_1="0.95"
+DIFF_RULE_2="0.3"

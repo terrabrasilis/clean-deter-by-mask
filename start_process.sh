@@ -1,4 +1,7 @@
 #!/bin/bash
+# get start time
+start=`date +%s`
+
 # To Database configurations, edit the pgconfig or create it based on pgconfig.example
 # Loading DB main configurations
 . ./db_main_conf.sh
@@ -22,6 +25,8 @@ backupDatabase
 importSHP $BASE_DIR $SHP_PRODES
 #ONLY_PRINT_SQL=false
 
+# disable trigger
+execQuery "$DISABLE_TRIGGER"
 # make valid geometries into TABLE_TO_CLEAN
 execQuery "$TABLE_TO_CLEAN_MAKE_VALID"
 # new table with removables by date from TABLE_TO_CLEAN
@@ -35,13 +40,7 @@ execQuery "$DELETE_BY_INTERSECT"
 
 # make intersection with prodes
 execQuery "$INTER_CREATE"
-# copy by rule of area difference to removables table (use the AREA_RULE on options.sh to change this value)
-execQuery "$COPY_TO_REMOVABLES"
-# clean temporary table
-execQuery "$DELETE_FROM_TMP"
-# clean temporary intersection table
-execQuery "$DELETE_FROM_INTER_TMP"
-# make difference
+# make the difference between the original alerts and the intersection fractions.
 execQuery "$DIFF_CREATE"
 
 # -------------------------------------------------------
@@ -56,7 +55,16 @@ execQuery "$INTER_FIX_GEOM_COL"
 # and fractions by difference to production table
 moveResultsToTargetTables
 # -------------------------------------------------------
+# enable trigger
+execQuery "$ENABLE_TRIGGER"
 
 # drop intermediate tables
-ONLY_PRINT_SQL=true
-execQuery "$DROP_TMPS"
+# execQuery "$DROP_TMPS"
+
+# print duration of script execution
+end=`date +%s`
+let deltatime=end-start
+let hours=deltatime/3600
+let minutes=(deltatime/60)%60
+let seconds=deltatime%60
+printf "Time spent: %d:%02d:%02d\n" $hours $minutes $second

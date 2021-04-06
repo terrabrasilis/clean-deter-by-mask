@@ -12,7 +12,13 @@ backupDatabase(){
       echo "Database $PG_DATABASE not backuped!" >> $LOGFILE
     fi
   else
-    echo "The backup is performed only if the print mode is disabled." >> $LOGFILE
+    if [[ $BACKUP_DB = false ]]; then
+      echo "To perform the backup, the BACKUP_DB option must be enabled." >> $LOGFILE
+    else
+      if [[ $ONLY_PRINT_SQL = true ]]; then
+        echo "The backup is performed only if the print mode is disabled." >> $LOGFILE
+      fi
+    fi
   fi
 }
 
@@ -21,7 +27,7 @@ execQuery(){
   
   echo "$PG_QUERY" >> "$SQLFILE"
   echo "" >> "$SQLFILE"
-
+  
   if [ $ONLY_PRINT_SQL = false ]; then
     if $PG_BIN/psql $PG_CON -c """$PG_QUERY"""
     then
@@ -48,22 +54,25 @@ moveResultsToTargetTables(){
 
   mountQueryFractions(){
     # first parameter is class filter ("WHERE class_name IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')")
-    # second parameter is num fractions filter ("> 1")
+    # second parameter unary operator (">","<",">=","<=")
+    # third parameter is percent value operator (between 0 and 1)
+    # fourth parameter is the SELECT or DELETE operation over temporary table
+    # fifth parameter is the list of column names (col1, col2, col3...)
     SQL="WITH dumps AS ( "
     SQL=$SQL"  SELECT object_id, (st_dump(ogr_geometry)).geom as geom_dum "
-    SQL=$SQL"  FROM sdr_alerta_diff_tmp $1 "
+    SQL=$SQL"  FROM "$TABLE_TO_CLEAN"_diff_tmp $1 "
     SQL=$SQL"), fractions AS ( "
     SQL=$SQL"  SELECT object_id, COUNT(*) as num_fractions, SUM(st_area(geom_dum::geography))/10000 as area "
     SQL=$SQL"  FROM dumps "
     SQL=$SQL"  GROUP BY 1 "
     SQL=$SQL"  ORDER BY 2 DESC "
     SQL=$SQL") "
-    SQL=$SQL"SELECT $3 FROM sdr_alerta_tmp "
+    SQL=$SQL"$4 $5 FROM "$TABLE_TO_CLEAN"_tmp "
     SQL=$SQL"WHERE EXISTS( "
     SQL=$SQL"  SELECT object_id "
     SQL=$SQL"  FROM fractions "
-    SQL=$SQL"  WHERE object_id=sdr_alerta_tmp.object_id "
-    SQL=$SQL"  AND num_fractions $2 "
+    SQL=$SQL"  WHERE object_id="$TABLE_TO_CLEAN"_tmp.object_id "
+    SQL=$SQL"  AND area $2 (st_area("$TABLE_TO_CLEAN"_tmp.ogr_geometry::geography)/10000)*$3 "
     SQL=$SQL")"
     echo "$SQL"
   }
@@ -72,46 +81,55 @@ moveResultsToTargetTables(){
   # get table column to keep the column order
   TABLE_TO_CLEAN_COLS=$(getColumns "$COLS_SQL")
 
-  # criar tabela com poligonos de corte raso onde numero de frações de diferença é maior que 1 para virar mascara na producao
-  INPUT_DATA=$(mountQueryFractions "WHERE class_name IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" "> 1" "$TABLE_TO_CLEAN_COLS")
-  CREATE_MASK="CREATE TABLE $RESULT_MASK_TABLE AS $INPUT_DATA"
-  execQuery "$CREATE_MASK"
-
-  # criar lista de degradacoes que devem ficar na sdr_alerta (mais de uma fracao na tabela de diferenca - sdr_alerta_diff_tmp)
-  INPUT_DATA=$(mountQueryFractions "WHERE class_name NOT IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" "> 1" "$TABLE_TO_CLEAN_COLS")
+  # When the difference area is greater than or equal to 95% of the original alert.
+  # ------------------------------------------------------------------------------------------
+  # copy the alerts to the production table (sdr_alerta).
+  INPUT_DATA=$(mountQueryFractions " " ">=" "$DIFF_RULE_1" "SELECT" "$TABLE_TO_CLEAN_COLS")
   RESTORE="INSERT INTO "$TABLE_TO_CLEAN" ($TABLE_TO_CLEAN_COLS) $INPUT_DATA"
   execQuery "$RESTORE"
+  # delete the alerts of the temporary table (sdr_alerta_tmp).
+  DELETE_FROM=$(mountQueryFractions " " ">=" "$DIFF_RULE_1" "DELETE" " ")
+  execQuery "$DELETE_FROM"
   
+  # When the difference area is less than or equal to 30% of the original alert.
+  # ------------------------------------------------------------------------------------------
+  # copy the alerts to the removables table (sdr_alerta_removables).
+  INPUT_DATA=$(mountQueryFractions " " "<=" "$DIFF_RULE_2" "SELECT" "$TABLE_TO_CLEAN_COLS")
+  REMOVABLES="INSERT INTO "$TABLE_TO_CLEAN"_removables ($TABLE_TO_CLEAN_COLS) $INPUT_DATA"
+  execQuery "$REMOVABLES"
+  # delete the alerts of the temporary table (sdr_alerta_tmp).
+  DELETE_FROM=$(mountQueryFractions " " "<=" "$DIFF_RULE_2" "DELETE" " ")
+  execQuery "$DELETE_FROM"
 
-  # restante da diferenca vai para a tabela de removiveis e portanto para a de historico do TB
-  COLS_SQL=$(mountQueryCols "$TABLE_TO_CLEAN"_removables)
-  # get table column to keep the column order
-  COLUMNS1=$(getColumns "$COLS_SQL")
-  INPUT_DATA=$(mountQueryFractions "WHERE 1=1" "= 1" "$TABLE_TO_CLEAN_COLS")
-  MV_REMOVABLES="INSERT INTO "$TABLE_TO_CLEAN"_removables ($COLUMNS1) $INPUT_DATA"
-  execQuery "$MV_REMOVABLES"
+  # When the area of difference is greater than 30% of the original alert and it is deforestation.
+  # ------------------------------------------------------------------------------------------
+  # copy the alerts to the DETER mask table (sdr_alerta_mask_<year>).
+  INPUT_DATA=$(mountQueryFractions "WHERE class_name IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" ">" "$DIFF_RULE_2" "SELECT" "$TABLE_TO_CLEAN_COLS")
+  CREATE_MASK="CREATE TABLE $RESULT_MASK_TABLE AS $INPUT_DATA"
+  execQuery "$CREATE_MASK"
+  # delete the alerts of the temporary table (sdr_alerta_tmp).
+  DELETE_FROM=$(mountQueryFractions "WHERE class_name IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" ">" "$DIFF_RULE_2" "DELETE" " ")
+  execQuery "$DELETE_FROM"
 
-  # COLS_SQL=$(mountQueryCols "$TABLE_TO_CLEAN"_diff_tmp)
-  # # get table column to keep the column order
-  # COLUMNS2=$(getColumns "$COLS_SQL")
+  # When the area of difference is greater than 30% of the original alert and it is degradation.
+  # ------------------------------------------------------------------------------------------
+  # copy the alerts to the DETER production table (sdr_alerta).
+  INPUT_DATA=$(mountQueryFractions "WHERE class_name NOT IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" ">" "$DIFF_RULE_2" "SELECT" "$TABLE_TO_CLEAN_COLS")
+  RESTORE="INSERT INTO "$TABLE_TO_CLEAN" ($TABLE_TO_CLEAN_COLS) $INPUT_DATA"
+  execQuery "$RESTORE"
+  # delete the alerts of the temporary table (sdr_alerta_tmp).
+  DELETE_FROM=$(mountQueryFractions "WHERE class_name NOT IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" ">" "$DIFF_RULE_2" "DELETE" " ")
+  execQuery "$DELETE_FROM"
 
-  # # copy the fractions of difference to TABLE_TO_CLEAN
-  # INSERT_DIFFS="INSERT INTO "$TABLE_TO_CLEAN" ($COLUMNS1) SELECT $COLUMNS2 FROM "$TABLE_TO_CLEAN"_diff_tmp;"
-  # # copy diffs to production table
-  # execQuery "$INSERT_DIFFS"
-
-  # COLS_SQL=$(mountQueryCols "$TABLE_TO_CLEAN"_removables)
-  # # get table column to keep the column order
-  # COLUMNS1=$(getColumns "$COLS_SQL")
-  
-  # COLS_SQL=$(mountQueryCols "$TABLE_TO_CLEAN"_inter_tmp)
-  # # get table column to keep the column order
-  # COLUMNS2=$(getColumns "$COLS_SQL")
-
-  # # copy the fractions of intersect to removables table
-  # INSERT_INTERS="INSERT INTO "$TABLE_TO_CLEAN"_removables ($COLUMNS1) SELECT $COLUMNS2 FROM "$TABLE_TO_CLEAN"_inter_tmp;"
-  # # copy intersections to removables table
-  # execQuery "$INSERT_INTERS"
+  # The remaining alerts in the temporary table are alerts covered by PRODES deforestation and will be moved to the removable table.
+  # ------------------------------------------------------------------------------------------
+  # copy the alerts to the removables table (sdr_alerta_removables).
+  INPUT_DATA="SELECT $TABLE_TO_CLEAN_COLS FROM "$TABLE_TO_CLEAN"_tmp"
+  REMOVABLES="INSERT INTO "$TABLE_TO_CLEAN"_removables ($TABLE_TO_CLEAN_COLS) $INPUT_DATA"
+  execQuery "$REMOVABLES"
+  # delete the alerts of the temporary table (sdr_alerta_tmp).
+  DELETE_FROM="DELETE FROM "$TABLE_TO_CLEAN"_tmp"
+  execQuery "$DELETE_FROM"
 }
 
 getColumns(){
@@ -183,6 +201,8 @@ importSHP(){
   execQuery "$DROP_DISSOLVED"
   MAKE_VALID="UPDATE $PRODES_TABLE SET geom=ST_MakeValid(geom) WHERE ST_IsValid(geom) = false;"
   execQuery "$MAKE_VALID"
+  CREATE_INDEX="CREATE INDEX "$PRODES_TABLE"_geom_index ON $PRODES_TABLE USING gist (geom gist_geometry_ops_nd) TABLESPACE pg_default;"
+  execQuery "$CREATE_INDEX"
   echo "=================================================" >> $LOGFILE
   echo "========== $PRODES_TABLE table is read ==========" >> $LOGFILE
   echo "=================================================" >> $LOGFILE

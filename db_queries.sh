@@ -13,11 +13,11 @@ CREATE_TEMP_CANDIDATE=$CREATE_TEMP_CANDIDATE"SELECT a.* FROM $TABLE_TO_CLEAN as 
 CREATE_TEMP_CANDIDATE=$CREATE_TEMP_CANDIDATE"WHERE a.$TABLE_TO_CLEAN_KEY in ( "
 CREATE_TEMP_CANDIDATE=$CREATE_TEMP_CANDIDATE"SELECT tb1.$TABLE_TO_CLEAN_KEY FROM "
 CREATE_TEMP_CANDIDATE=$CREATE_TEMP_CANDIDATE"$TABLE_TO_CLEAN as tb1, $PRODES_TABLE as tb2 "
-CREATE_TEMP_CANDIDATE=$CREATE_TEMP_CANDIDATE"WHERE ST_Intersects(tb1.$GEOM_COLUMN, tb2.geom));"
+CREATE_TEMP_CANDIDATE=$CREATE_TEMP_CANDIDATE"WHERE (tb1.$GEOM_COLUMN && tb2.geom) AND ST_Intersects(st_buffer(tb1.$GEOM_COLUMN,-$BUFFER), tb2.geom));"
 
 # Delete original feature candidates from TABLE_TO_CLEAN
 DELETE_BY_INTERSECT="DELETE FROM $TABLE_TO_CLEAN as tb1 USING $PRODES_TABLE as tb2 "
-DELETE_BY_INTERSECT=$DELETE_BY_INTERSECT"WHERE ST_Intersects(tb1.$GEOM_COLUMN, tb2.geom);"
+DELETE_BY_INTERSECT=$DELETE_BY_INTERSECT"WHERE (tb1.$GEOM_COLUMN && tb2.geom) AND ST_Intersects(st_buffer(tb1.$GEOM_COLUMN,-$BUFFER), tb2.geom);"
 
 # The second step to delete or keep by intersect and difference
 # ==============================================================================
@@ -26,7 +26,7 @@ INTER_CREATE="CREATE TABLE "$TABLE_TO_CLEAN"_inter_tmp AS ( "
 INTER_CREATE=$INTER_CREATE" WITH inter_tmp AS ( "
 INTER_CREATE=$INTER_CREATE" 	SELECT tb1.*, CASE WHEN ST_CoveredBy(tb1.$GEOM_COLUMN, tb2.geom)  THEN ST_Multi(ST_MakeValid(tb1.$GEOM_COLUMN))  "
 INTER_CREATE=$INTER_CREATE" 	ELSE ST_Multi(ST_CollectionExtract(ST_Intersection(st_buffer(tb1.$GEOM_COLUMN,$BUFFER), st_buffer(tb2.geom,$BUFFER)), 3)) END AS geom_inter "
-INTER_CREATE=$INTER_CREATE" 	FROM "$TABLE_TO_CLEAN"_tmp as tb1, $PRODES_TABLE as tb2 WHERE ST_Intersects(tb1.$GEOM_COLUMN, tb2.geom) "
+INTER_CREATE=$INTER_CREATE" 	FROM "$TABLE_TO_CLEAN"_tmp as tb1, $PRODES_TABLE as tb2 WHERE (tb1.$GEOM_COLUMN && tb2.geom) AND ST_Intersects(tb1.$GEOM_COLUMN, tb2.geom) "
 INTER_CREATE=$INTER_CREATE" ), "
 INTER_CREATE=$INTER_CREATE" inter_tmp_group AS ( "
 INTER_CREATE=$INTER_CREATE" 	SELECT $TABLE_TO_CLEAN_KEY, ST_Multi(ST_CollectionExtract(ST_Collect(geom_inter),3)) as geom_inter FROM inter_tmp "
@@ -36,30 +36,6 @@ INTER_CREATE=$INTER_CREATE" SELECT b.*, a.geom_inter "
 INTER_CREATE=$INTER_CREATE" FROM inter_tmp_group as a, "$TABLE_TO_CLEAN"_tmp as b "
 INTER_CREATE=$INTER_CREATE" WHERE a.$TABLE_TO_CLEAN_KEY=b.$TABLE_TO_CLEAN_KEY "
 INTER_CREATE=$INTER_CREATE" );"
-
-# select removables in the temporary candidate table to remove from TABLE_TO_CLEAN
-# when the difference between the total alert area and the area resulting from
-# the intersection is less than or equal to AREA_RULE (start at 3ha)
-SELECT_AREA_RULE="SELECT tmp.$TABLE_TO_CLEAN_KEY "
-SELECT_AREA_RULE=$SELECT_AREA_RULE"FROM "$TABLE_TO_CLEAN"_inter_tmp as inter, "$TABLE_TO_CLEAN"_tmp as tmp "
-SELECT_AREA_RULE=$SELECT_AREA_RULE"WHERE ( (ST_Area(inter.$GEOM_COLUMN::geography)/10000)-(ST_Area(inter.geom_inter::geography)/10000) )<=$AREA_RULE "
-SELECT_AREA_RULE=$SELECT_AREA_RULE"AND inter.$TABLE_TO_CLEAN_KEY = tmp.$TABLE_TO_CLEAN_KEY"
-
-# copy the removables by intersect from temporary candidate table to removables table
-COPY_TO_REMOVABLES="WITH list_of_removables AS ($SELECT_AREA_RULE) "
-COPY_TO_REMOVABLES=$COPY_TO_REMOVABLES"INSERT INTO "$TABLE_TO_CLEAN"_removables "
-COPY_TO_REMOVABLES=$COPY_TO_REMOVABLES"SELECT * FROM "$TABLE_TO_CLEAN"_tmp as tmp "
-COPY_TO_REMOVABLES=$COPY_TO_REMOVABLES"WHERE tmp.$TABLE_TO_CLEAN_KEY IN (SELECT * FROM list_of_removables);"
-
-# delete the removables by intersect from temporary candidate table
-DELETE_FROM_TMP="WITH list_of_removables AS ($SELECT_AREA_RULE) "
-DELETE_FROM_TMP=$DELETE_FROM_TMP"DELETE FROM "$TABLE_TO_CLEAN"_tmp as tmp "
-DELETE_FROM_TMP=$DELETE_FROM_TMP"WHERE tmp.$TABLE_TO_CLEAN_KEY IN (SELECT * FROM list_of_removables);"
-
-# delete the removables by intersect from temporary intersection table
-DELETE_FROM_INTER_TMP="DELETE FROM "$TABLE_TO_CLEAN"_inter_tmp as tmp "
-DELETE_FROM_INTER_TMP=$DELETE_FROM_INTER_TMP"WHERE tmp.$TABLE_TO_CLEAN_KEY IN "
-DELETE_FROM_INTER_TMP=$DELETE_FROM_INTER_TMP"(SELECT $TABLE_TO_CLEAN_KEY FROM "$TABLE_TO_CLEAN"_removables);"
 
 # Make the difference between the temporary candidates table and temporary intersection table
 DIFF_CREATE="CREATE TABLE "$TABLE_TO_CLEAN"_diff_tmp AS SELECT tmp.*, "
@@ -80,3 +56,7 @@ INTER_FIX_GEOM_COL=$INTER_FIX_GEOM_COL" ALTER TABLE "$TABLE_TO_CLEAN"_inter_tmp 
 DROP_TMPS="DROP TABLE "$TABLE_TO_CLEAN"_tmp;"
 DROP_TMPS=$DROP_TMPS"DROP TABLE "$TABLE_TO_CLEAN"_diff_tmp;"
 DROP_TMPS=$DROP_TMPS"DROP TABLE "$TABLE_TO_CLEAN"_inter_tmp;"
+
+# auxiliar SQLs
+DISABLE_TRIGGER="ALTER TABLE $TABLE_TO_CLEAN DISABLE TRIGGER block_remove_audited_deforestations;"
+ENABLE_TRIGGER="ALTER TABLE $TABLE_TO_CLEAN ENABLE TRIGGER block_remove_audited_deforestations;"
