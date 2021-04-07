@@ -4,6 +4,16 @@ Automate the workflow used to clear DETER data annually using the PRODES mask.
 
 Go to the "Defined flow" section of this document for details about implemented flow.
 
+## Environment
+
+To run this scripts we use the compatible version of postgis docker image.
+
+```sh
+docker run --rm --workdir="/data" -v /data/repository/content:/data postgis/postgis:13-3.1-alpine /data/start_process.sh
+```
+Where the /data/repository/content directory is a location into machine that we put the clone of this repository.
+
+
 ## Ways of execution
 
 There are two ways to perform this process.
