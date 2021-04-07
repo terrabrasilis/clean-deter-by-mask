@@ -157,7 +157,7 @@ importSHP(){
   fi
   if [ $ONLY_PRINT_SQL = false ]; then
     unzip -o -d $SHP_DIR $SHP_NAME_AND_DIR
-    SHP2PGSQL_OPTIONS="-c -s 4674:4674 -W 'LATIN1' -g geom"
+    SHP2PGSQL_OPTIONS="-c -s 4674:4674 -g geom"
     if $PG_BIN/shp2pgsql $SHP2PGSQL_OPTIONS $SHP_NAME_AND_DIR $PRODES_TABLE | $PG_BIN/psql $PG_CON
     then
       echo "Import ($SHP_NAME_AND_DIR) ... OK" >> $LOGFILE
