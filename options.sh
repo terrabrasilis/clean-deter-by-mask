@@ -4,7 +4,7 @@
 ONLY_PRINT_SQL=false
 
 # To disable database backup change this to false. If print mode is enable, backup is disable by default
-BACKUP_DB=false
+BACKUP_DB=true
 
 # adjust buffer value to perform difference and intersection
 # It's necessary to avoid the issues of st_intersection and st_difference
