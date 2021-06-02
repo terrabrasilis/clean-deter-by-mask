@@ -148,33 +148,37 @@ getColumns(){
 
 # import shapefile
 importSHP(){
-  SHP_DIR=$1
-  SHP_NAME=$2
-  SHP_NAME_AND_DIR="$SHP_DIR/$SHP_NAME.zip"
-  if [ ! -f "$SHP_NAME_AND_DIR" ]; then
-    echo "The PRODES deforestation file is missing." >> $LOGFILE
-    exit 1
-  fi
-  if [ $ONLY_PRINT_SQL = false ]; then
-    unzip -o -d $SHP_DIR $SHP_NAME_AND_DIR
-    SHP2PGSQL_OPTIONS="-c -s 4674:4674 -g geom"
-    if $PG_BIN/shp2pgsql $SHP2PGSQL_OPTIONS $SHP_NAME_AND_DIR $PRODES_TABLE | $PG_BIN/psql $PG_CON
-    then
-      echo "Import ($SHP_NAME_AND_DIR) ... OK" >> $LOGFILE
-      # SHP_NAME=`echo $SHP_NAME | cut -d "." -f 1` # to remove extension .zip from name of file
-      rm $SHP_DIR/$SHP_NAME.{dbf,prj,shp,shx}
-    else
-      echo "Import ($SHP_NAME_AND_DIR) ... FAIL" >> $LOGFILE
+  if [[ $BYPASS_IMPORT_MASK = false ]]; then
+    SHP_DIR=$1
+    SHP_NAME=$2
+    SHP_NAME_AND_DIR="$SHP_DIR/$SHP_NAME.zip"
+    if [ ! -f "$SHP_NAME_AND_DIR" ]; then
+      echo "The PRODES deforestation file is missing." >> $LOGFILE
       exit 1
     fi
-  else
-    echo "Print only is enable." >> $LOGFILE
+    if [ $ONLY_PRINT_SQL = false ]; then
+      unzip -o -d $SHP_DIR $SHP_NAME_AND_DIR
+      SHP2PGSQL_OPTIONS="-c -s 4674:4674 -g geom"
+      if $PG_BIN/shp2pgsql $SHP2PGSQL_OPTIONS $SHP_NAME_AND_DIR $PRODES_TABLE | $PG_BIN/psql $PG_CON
+      then
+        echo "Import ($SHP_NAME_AND_DIR) ... OK" >> $LOGFILE
+        # SHP_NAME=`echo $SHP_NAME | cut -d "." -f 1` # to remove extension .zip from name of file
+        rm $SHP_DIR/$SHP_NAME.{dbf,prj,shp,shx}
+      else
+        echo "Import ($SHP_NAME_AND_DIR) ... FAIL" >> $LOGFILE
+        exit 1
+      fi
+    else
+      echo "Print only is enable." >> $LOGFILE
+    fi
   fi
+}
 
+prepareMaskData(){
   echo "=================================================" >> $LOGFILE
   echo "Perform changes over the deforestation mask table" >> $LOGFILE
 
-  DELETE_UNUSED_CLASS="DELETE FROM $PRODES_TABLE WHERE class_name<>'d$CURRENT_PRODES_YEAR';"
+  DELETE_UNUSED_CLASS="DELETE FROM $PRODES_TABLE WHERE class_name not ilike '%$CURRENT_PRODES_YEAR';"
   execQuery "$DELETE_UNUSED_CLASS"
   
   # remove small line-like polygons

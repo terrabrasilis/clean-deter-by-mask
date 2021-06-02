@@ -20,10 +20,11 @@ start=`date +%s`
 backupDatabase
 
 # Use the ONLY_PRINT_SQL on options.sh to change this behaviour
-# unzip, import and clean deforestation data
-#ONLY_PRINT_SQL=true
+# unzip, import
 importSHP $BASE_DIR $SHP_PRODES
-#ONLY_PRINT_SQL=false
+
+# clean deforestation mask data
+prepareMaskData
 
 # disable trigger
 execQuery "$DISABLE_TRIGGER"
@@ -59,7 +60,7 @@ moveResultsToTargetTables
 execQuery "$ENABLE_TRIGGER"
 
 # drop intermediate tables
-# execQuery "$DROP_TMPS"
+execQuery "$DROP_TMPS"
 
 # print duration of script execution
 end=`date +%s`
