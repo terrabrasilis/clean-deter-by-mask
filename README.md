@@ -9,13 +9,13 @@ Go to the "Defined flow" section of this document for details about implemented 
 To run this scripts we use the compatible version of postgis docker image.
 
 ```sh
-docker run --rm --workdir="/data" -v /data/repository/content:/data postgis/postgis:13-3.1-alpine ./start_process.sh
+docker run --rm --workdir="/data" -v /data/repository/content:/data terrabrasilis/deter-clean-postgis:13-3.1-alpine ./start_process.sh
 ```
 Where the /data/repository/content directory is a location into machine that we put the clone of this repository.
 
 Example:
 ```sh
-docker run --rm --workdir="/data" -v /postgres/docker/git-clone-projects/clean-deter-by-mask:/data postgis/postgis:13-3.1-alpine ./start_process.sh
+docker run --rm --workdir="/data" -v /postgres/docker/git-clone-projects/clean-deter-by-mask:/data terrabrasilis/deter-clean-postgis:13-3.1-alpine ./start_process.sh
 ```
 
 ## Ways of execution
