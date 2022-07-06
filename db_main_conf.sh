@@ -6,7 +6,7 @@ fi
 . ./pgconfig
 
 # year reference PRODES YYYY
-CURRENT_PRODES_YEAR="2020"
+CURRENT_PRODES_YEAR="2021"
 # the name of ZIP file without extension
 SHP_PRODES="yearly_deforestation"
 

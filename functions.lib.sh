@@ -163,7 +163,7 @@ importSHP(){
       then
         echo "Import ($SHP_NAME_AND_DIR) ... OK" >> $LOGFILE
         # SHP_NAME=`echo $SHP_NAME | cut -d "." -f 1` # to remove extension .zip from name of file
-        rm $SHP_DIR/$SHP_NAME.{dbf,prj,shp,shx}
+        rm $SHP_DIR/$SHP_NAME.{dbf,prj,shp,shx,cpg}
       else
         echo "Import ($SHP_NAME_AND_DIR) ... FAIL" >> $LOGFILE
         exit 1
@@ -184,7 +184,7 @@ prepareMaskData(){
   # remove small line-like polygons
   CREATE_DUMP="CREATE TABLE "$PRODES_TABLE"_dumped AS"
   CREATE_DUMP=$CREATE_DUMP" SELECT (st_dump(geom)).geom as geom_dump, *"
-  CREATE_DUMP=$CREATE_DUMP" FROM "$PRODES_TABLE";"
+  CREATE_DUMP=$CREATE_DUMP" FROM "$PRODES_TABLE" WHERE ST_Area(geom)>0.0;"
   execQuery "$CREATE_DUMP"
   DELETE_SMALLS="DELETE FROM "$PRODES_TABLE"_dumped WHERE ST_AREA(geom_dump::geography)<=1;"
   execQuery "$DELETE_SMALLS"
