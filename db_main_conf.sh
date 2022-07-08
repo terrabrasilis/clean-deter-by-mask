@@ -32,12 +32,12 @@ DATE_COLUMN="(view_date)::date" # FM - PRODUCTION
 
 # name of geometry column of TABLE_TO_CLEAN
 GEOM_COLUMN="geom" # FM - PRODUCTION
-# GEOM_COLUMN="ogr_geometry" # DETER AMZ - PRODUCTION
+#GEOM_COLUMN="ogr_geometry" # DETER AMZ - PRODUCTION
 #GEOM_COLUMN="geom" # DETER CERRADO - PRODUCTION
 
 # name of area column of TABLE_TO_CLEAN
 AREA_COLUMN="areatotalk" # FM - PRODUCTION
-# AREA_COLUMN="area" # DETER AMZ - PRODUCTION
+#AREA_COLUMN="area" # DETER AMZ - PRODUCTION
 #AREA_COLUMN="area" # DETER CERRADO - PRODUCTION
 
 # name of "class name" column of TABLE_TO_CLEAN

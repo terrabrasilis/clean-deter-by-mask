@@ -59,20 +59,20 @@ moveResultsToTargetTables(){
     # fourth parameter is the SELECT or DELETE operation over temporary table
     # fifth parameter is the list of column names (col1, col2, col3...)
     SQL="WITH dumps AS ( "
-    SQL=$SQL"  SELECT object_id, (st_dump(ogr_geometry)).geom as geom_dum "
+    SQL=$SQL"  SELECT ${TABLE_TO_CLEAN_KEY}, (st_dump(${GEOM_COLUMN})).geom as geom_dum "
     SQL=$SQL"  FROM "$TABLE_TO_CLEAN"_diff_tmp $1 "
     SQL=$SQL"), fractions AS ( "
-    SQL=$SQL"  SELECT object_id, COUNT(*) as num_fractions, SUM(st_area(geom_dum::geography))/10000 as area "
+    SQL=$SQL"  SELECT ${TABLE_TO_CLEAN_KEY}, COUNT(*) as num_fractions, SUM(st_area(geom_dum::geography))/10000 as area "
     SQL=$SQL"  FROM dumps "
     SQL=$SQL"  GROUP BY 1 "
     SQL=$SQL"  ORDER BY 2 DESC "
     SQL=$SQL") "
     SQL=$SQL"$4 $5 FROM "$TABLE_TO_CLEAN"_tmp "
     SQL=$SQL"WHERE EXISTS( "
-    SQL=$SQL"  SELECT object_id "
+    SQL=$SQL"  SELECT ${TABLE_TO_CLEAN_KEY} "
     SQL=$SQL"  FROM fractions "
-    SQL=$SQL"  WHERE object_id="$TABLE_TO_CLEAN"_tmp.object_id "
-    SQL=$SQL"  AND area $2 (st_area("$TABLE_TO_CLEAN"_tmp.ogr_geometry::geography)/10000)*$3 "
+    SQL=$SQL"  WHERE ${TABLE_TO_CLEAN_KEY}="$TABLE_TO_CLEAN"_tmp.${TABLE_TO_CLEAN_KEY} "
+    SQL=$SQL"  AND area $2 (st_area("$TABLE_TO_CLEAN"_tmp.${GEOM_COLUMN}::geography)/10000)*$3 "
     SQL=$SQL")"
     echo "$SQL"
   }
@@ -158,7 +158,7 @@ importSHP(){
     fi
     if [ $ONLY_PRINT_SQL = false ]; then
       unzip -o -d $SHP_DIR $SHP_NAME_AND_DIR
-      SHP2PGSQL_OPTIONS="-c -s 4674:4674 -g geom"
+      SHP2PGSQL_OPTIONS="-c -s 4674:4326 -g geom"
       if $PG_BIN/shp2pgsql $SHP2PGSQL_OPTIONS $SHP_NAME_AND_DIR $PRODES_TABLE | $PG_BIN/psql $PG_CON
       then
         echo "Import ($SHP_NAME_AND_DIR) ... OK" >> $LOGFILE
