@@ -27,7 +27,7 @@ importSHP $BASE_DIR $SHP_PRODES
 prepareMaskData
 
 # disable trigger
-execQuery "$DISABLE_TRIGGER"
+# execQuery "$DISABLE_TRIGGER"
 # make valid geometries into TABLE_TO_CLEAN
 execQuery "$TABLE_TO_CLEAN_MAKE_VALID"
 # new table with removables by date from TABLE_TO_CLEAN
@@ -57,7 +57,7 @@ execQuery "$INTER_FIX_GEOM_COL"
 moveResultsToTargetTables
 # -------------------------------------------------------
 # enable trigger
-execQuery "$ENABLE_TRIGGER"
+# execQuery "$ENABLE_TRIGGER"
 
 # drop intermediate tables
 execQuery "$DROP_TMPS"

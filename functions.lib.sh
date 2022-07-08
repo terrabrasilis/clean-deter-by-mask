@@ -104,21 +104,21 @@ moveResultsToTargetTables(){
   # When the area of difference is greater than 30% of the original alert and it is deforestation.
   # ------------------------------------------------------------------------------------------
   # copy the alerts to the DETER mask table (sdr_alerta_mask_<year>).
-  INPUT_DATA=$(mountQueryFractions "WHERE class_name IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" ">" "$DIFF_RULE_2" "SELECT" "$TABLE_TO_CLEAN_COLS")
+  INPUT_DATA=$(mountQueryFractions "WHERE ${CLASSNAME_COLUMN} IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" ">" "$DIFF_RULE_2" "SELECT" "$TABLE_TO_CLEAN_COLS")
   CREATE_MASK="CREATE TABLE $RESULT_MASK_TABLE AS $INPUT_DATA"
   execQuery "$CREATE_MASK"
   # delete the alerts of the temporary table (sdr_alerta_tmp).
-  DELETE_FROM=$(mountQueryFractions "WHERE class_name IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" ">" "$DIFF_RULE_2" "DELETE" " ")
+  DELETE_FROM=$(mountQueryFractions "WHERE ${CLASSNAME_COLUMN} IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" ">" "$DIFF_RULE_2" "DELETE" " ")
   execQuery "$DELETE_FROM"
 
   # When the area of difference is greater than 30% of the original alert and it is degradation.
   # ------------------------------------------------------------------------------------------
   # copy the alerts to the DETER production table (sdr_alerta).
-  INPUT_DATA=$(mountQueryFractions "WHERE class_name NOT IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" ">" "$DIFF_RULE_2" "SELECT" "$TABLE_TO_CLEAN_COLS")
+  INPUT_DATA=$(mountQueryFractions "WHERE ${CLASSNAME_COLUMN} NOT IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" ">" "$DIFF_RULE_2" "SELECT" "$TABLE_TO_CLEAN_COLS")
   RESTORE="INSERT INTO "$TABLE_TO_CLEAN" ($TABLE_TO_CLEAN_COLS) $INPUT_DATA"
   execQuery "$RESTORE"
   # delete the alerts of the temporary table (sdr_alerta_tmp).
-  DELETE_FROM=$(mountQueryFractions "WHERE class_name NOT IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" ">" "$DIFF_RULE_2" "DELETE" " ")
+  DELETE_FROM=$(mountQueryFractions "WHERE ${CLASSNAME_COLUMN} NOT IN ('MINERACAO','DESMATAMENTO_CR','DESMATAMENTO_VEG')" ">" "$DIFF_RULE_2" "DELETE" " ")
   execQuery "$DELETE_FROM"
 
   # The remaining alerts in the temporary table are alerts covered by PRODES deforestation and will be moved to the removable table.
@@ -177,8 +177,9 @@ importSHP(){
 prepareMaskData(){
   echo "=================================================" >> $LOGFILE
   echo "Perform changes over the deforestation mask table" >> $LOGFILE
+  CLASSNAME="class_name"
 
-  DELETE_UNUSED_CLASS="DELETE FROM $PRODES_TABLE WHERE class_name not ilike '%$CURRENT_PRODES_YEAR';"
+  DELETE_UNUSED_CLASS="DELETE FROM $PRODES_TABLE WHERE ${CLASSNAME} not ilike '%$CURRENT_PRODES_YEAR';"
   execQuery "$DELETE_UNUSED_CLASS"
   
   # remove small line-like polygons
@@ -191,14 +192,14 @@ prepareMaskData(){
   DROP_ORIGINAL="DROP TABLE "$PRODES_TABLE";"
   execQuery "$DROP_ORIGINAL"
   DISSOLVE="CREATE TABLE "$PRODES_TABLE"_dissolved AS "
-  DISSOLVE=$DISSOLVE"SELECT class_name, ST_Union(f.geom_dump) as geom "
+  DISSOLVE=$DISSOLVE"SELECT ${CLASSNAME}, ST_Union(f.geom_dump) as geom "
   DISSOLVE=$DISSOLVE"FROM "$PRODES_TABLE"_dumped f "
-  DISSOLVE=$DISSOLVE"GROUP BY class_name;"
+  DISSOLVE=$DISSOLVE"GROUP BY ${CLASSNAME};"
   execQuery "$DISSOLVE"
   DROP_DUMPED="DROP TABLE "$PRODES_TABLE"_dumped;"
   execQuery "$DROP_DUMPED"
   CREATE_FINAL="CREATE TABLE "$PRODES_TABLE" AS "
-  CREATE_FINAL=$CREATE_FINAL"SELECT (ST_Dump(geom)).geom as geom, class_name "
+  CREATE_FINAL=$CREATE_FINAL"SELECT (ST_Dump(geom)).geom as geom, ${CLASSNAME} "
   CREATE_FINAL=$CREATE_FINAL"FROM "$PRODES_TABLE"_dissolved;"
   execQuery "$CREATE_FINAL"
   DROP_DISSOLVED="DROP TABLE "$PRODES_TABLE"_dissolved;"

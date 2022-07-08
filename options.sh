@@ -7,7 +7,7 @@ ONLY_PRINT_SQL=false
 BACKUP_DB=false
 
 # If bypass is enabled, import shapefile of mask data will not be executed
-BYPASS_IMPORT_MASK=false
+BYPASS_IMPORT_MASK=true
 
 # adjust buffer value to perform difference and intersection
 # It's necessary to avoid the issues of st_intersection and st_difference
