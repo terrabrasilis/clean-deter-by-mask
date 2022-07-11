@@ -187,7 +187,7 @@ prepareMaskData(){
   CREATE_DUMP=$CREATE_DUMP" SELECT (st_dump(geom)).geom as geom_dump, *"
   CREATE_DUMP=$CREATE_DUMP" FROM "$PRODES_TABLE" WHERE ST_Area(geom)>0.0;"
   execQuery "$CREATE_DUMP"
-  DELETE_SMALLS="DELETE FROM "$PRODES_TABLE"_dumped WHERE ST_AREA(geom_dump::geography)<=1;"
+  DELETE_SMALLS="DELETE FROM "$PRODES_TABLE"_dumped WHERE ST_AREA(ST_Buffer(geom_dump,0)::geography)<=1;"
   execQuery "$DELETE_SMALLS"
   DROP_ORIGINAL="DROP TABLE "$PRODES_TABLE";"
   execQuery "$DROP_ORIGINAL"
