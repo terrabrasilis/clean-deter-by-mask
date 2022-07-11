@@ -26,7 +26,7 @@ TABLE_TO_CLEAN_KEY="id" # FM - PRODUCTION
 #TABLE_TO_CLEAN_KEY="object_id" # DETER CERRADO - PRODUCTION
 
 # name of column to filter by PRODES date limit
-DATE_COLUMN="(view_date)::date" # FM - PRODUCTION
+DATE_COLUMN="(image_date)::date" # FM - PRODUCTION
 #DATE_COLUMN="(data_img)::date" # DETER AMZ - PRODUCTION
 #DATE_COLUMN="date" # DETER CERRADO - PRODUCTION
 
