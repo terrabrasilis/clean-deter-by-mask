@@ -1,9 +1,13 @@
+# ==============================================================================
 # The first step to delete by date
 # ==============================================================================
+# Materialize SQL View as main DETER table
+CREATE_DETER_MAIN="CREATE TABLE "$TABLE_TO_CLEAN" AS SELECT * FROM public.sdr_alerta_view;"
+
 # apply make valid to prepare geometries of TABLE_TO_CLEAN table to vectorial operations
 TABLE_TO_CLEAN_MAKE_VALID="UPDATE $TABLE_TO_CLEAN SET $GEOM_COLUMN=ST_MakeValid($GEOM_COLUMN) WHERE ST_IsValid($GEOM_COLUMN) = false;"
 # create new table to put removable features using filter by date
-REMOVABLE_TABLE="CREATE TABLE "$TABLE_TO_CLEAN"_removables AS "
+REMOVABLE_TABLE="CREATE TABLE "$TABLE_TO_CLEAN"_removables_$CURRENT_PRODES_YEAR AS "
 REMOVABLE_TABLE=$REMOVABLE_TABLE"SELECT * FROM $TABLE_TO_CLEAN WHERE $DATE_COLUMN <= $PRODES_DATE_LIMIT;"
 # delete features using filter by date
 DELETE_BY_DATE="DELETE FROM $TABLE_TO_CLEAN WHERE $DATE_COLUMN <= $PRODES_DATE_LIMIT;"
@@ -19,6 +23,7 @@ CREATE_TEMP_CANDIDATE=$CREATE_TEMP_CANDIDATE"WHERE (tb1.$GEOM_COLUMN && tb2.geom
 DELETE_BY_INTERSECT="DELETE FROM $TABLE_TO_CLEAN as tb1 USING $PRODES_TABLE as tb2 "
 DELETE_BY_INTERSECT=$DELETE_BY_INTERSECT"WHERE (tb1.$GEOM_COLUMN && tb2.geom) AND ST_Intersects(st_buffer(tb1.$GEOM_COLUMN,-$BUFFER), tb2.geom);"
 
+# ==============================================================================
 # The second step to delete or keep by intersect and difference
 # ==============================================================================
 # separate the fractions of intersecting geometries between candidate alerts and mask.
@@ -52,11 +57,32 @@ DIFF_FIX_GEOM_COL=$DIFF_FIX_GEOM_COL" ALTER TABLE "$TABLE_TO_CLEAN"_diff_tmp REN
 INTER_FIX_GEOM_COL="ALTER TABLE "$TABLE_TO_CLEAN"_inter_tmp DROP COLUMN $GEOM_COLUMN;"
 INTER_FIX_GEOM_COL=$INTER_FIX_GEOM_COL" ALTER TABLE "$TABLE_TO_CLEAN"_inter_tmp RENAME geom_inter TO $GEOM_COLUMN;"
 
+# ==============================================================================
+# The third step to delete from final deter tables
+# ==============================================================================
+# delete all degradations from sdr_alerta
+DELETE_DEGRAD_ON_FINAL="DELETE FROM sdr_alerta WHERE uuid NOT IN (SELECT uuid FROM $TABLE_TO_CLEAN);"
+# delete all degradations from sdr_alerta_deforestation_mask
+DELETE_DEFORE_ON_FINAL="DELETE FROM sdr_alerta_deforestation_mask WHERE uuid NOT IN (SELECT uuid FROM $TABLE_TO_CLEAN);"
+
+# ==============================================================================
+# The last step to drop temporary tables
+# ==============================================================================
 # the end: drop temporary tables.
 DROP_TMPS="DROP TABLE "$TABLE_TO_CLEAN"_tmp;"
-DROP_TMPS=$DROP_TMPS"DROP TABLE "$TABLE_TO_CLEAN"_diff_tmp;"
-DROP_TMPS=$DROP_TMPS"DROP TABLE "$TABLE_TO_CLEAN"_inter_tmp;"
+DROP_TMPS=$DROP_TMPS" DROP TABLE "$TABLE_TO_CLEAN"_diff_tmp;"
+DROP_TMPS=$DROP_TMPS" DROP TABLE "$TABLE_TO_CLEAN"_inter_tmp;"
+DROP_TMPS=$DROP_TMPS" DROP TABLE "$TABLE_TO_CLEAN";"
 
 # auxiliar SQLs
-DISABLE_TRIGGER="ALTER TABLE $TABLE_TO_CLEAN DISABLE TRIGGER block_remove_audited_deforestations;"
-ENABLE_TRIGGER="ALTER TABLE $TABLE_TO_CLEAN ENABLE TRIGGER block_remove_audited_deforestations;"
+DISABLE_TRIGGERS="ALTER TABLE $TABLE_TO_CLEAN DISABLE TRIGGER add_uuid_sdr_alerta;"
+DISABLE_TRIGGERS=$DISABLE_TRIGGERS" ALTER TABLE $TABLE_TO_CLEAN DISABLE TRIGGER copy_degradations_removed;"
+DISABLE_TRIGGERS=$DISABLE_TRIGGERS" ALTER TABLE $TABLE_TO_CLEAN DISABLE TRIGGER copy_new_degradation_on_insert;"
+DISABLE_TRIGGERS=$DISABLE_TRIGGERS" ALTER TABLE $TABLE_TO_CLEAN DISABLE TRIGGER copy_new_degradation_on_update;"
+DISABLE_TRIGGERS=$DISABLE_TRIGGERS" ALTER TABLE $TABLE_TO_CLEAN DISABLE TRIGGER move_audited_deforestations;"
+
+ENABLE_TRIGGERS="ALTER TABLE $TABLE_TO_CLEAN ENABLE TRIGGER add_uuid_sdr_alerta;"
+ENABLE_TRIGGERS=$ENABLE_TRIGGERS" ALTER TABLE $TABLE_TO_CLEAN ENABLE TRIGGER copy_degradations_removed;"
+ENABLE_TRIGGERS=$ENABLE_TRIGGERS" ALTER TABLE $TABLE_TO_CLEAN ENABLE TRIGGER copy_new_degradation_on_insert;"
+ENABLE_TRIGGERS=$ENABLE_TRIGGERS" ALTER TABLE $TABLE_TO_CLEAN ENABLE TRIGGER copy_new_degradation_on_update;"
+ENABLE_TRIGGERS=$ENABLE_TRIGGERS" ALTER TABLE $TABLE_TO_CLEAN ENABLE TRIGGER move_audited_deforestations;"
