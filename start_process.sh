@@ -26,8 +26,9 @@ importSHP $BASE_DIR $SHP_PRODES
 # clean deforestation mask data
 prepareMaskData
 
-# disable trigger
-execQuery "$DISABLE_TRIGGER"
+# Materialize SQL View as main DETER table
+execQuery "$CREATE_DETER_MAIN"
+
 # make valid geometries into TABLE_TO_CLEAN
 execQuery "$TABLE_TO_CLEAN_MAKE_VALID"
 # new table with removables by date from TABLE_TO_CLEAN
@@ -56,8 +57,13 @@ execQuery "$INTER_FIX_GEOM_COL"
 # and fractions by difference to production table
 moveResultsToTargetTables
 # -------------------------------------------------------
+# disable trigger
+execQuery "$DISABLE_TRIGGERS"
+# remove data from original output table
+execQuery "$DELETE_DEGRAD_ON_FINAL"
+execQuery "$DELETE_DEFORE_ON_FINAL"
 # enable trigger
-execQuery "$ENABLE_TRIGGER"
+execQuery "$ENABLE_TRIGGERS"
 
 # drop intermediate tables
 execQuery "$DROP_TMPS"
