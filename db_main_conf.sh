@@ -6,7 +6,7 @@ fi
 . ./pgconfig
 
 # year reference PRODES YYYY
-CURRENT_PRODES_YEAR="2021"
+CURRENT_PRODES_YEAR="2023"
 # the name of ZIP file without extension
 SHP_PRODES="yearly_deforestation"
 
@@ -15,8 +15,8 @@ SHP_PRODES="yearly_deforestation"
 PRODES_DATE_LIMIT="'$CURRENT_PRODES_YEAR-07-31'"
 PRODES_TABLE=$SHP_PRODES"_"$CURRENT_PRODES_YEAR
 
-# name of schema and table to clean
-TABLE_TO_CLEAN="sdr_alerta" # DETER AMZ - PRODUCTION
+# name of table to clean
+TABLE_TO_CLEAN="sdr_alerta_main" # DETER AMZ - PRODUCTION
 #TABLE_TO_CLEAN="sdr_alerta" # DETER CERRADO - PRODUCTION
 
 # name of column used to mark rows as removable
