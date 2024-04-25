@@ -48,7 +48,9 @@ Follow the steps below to perform the process:
 
  - Set the configurations for database before proceed (edit the pgconfig);
  - Verify if the backup of database is enable (edit the options.sh);
- - Download the yearly_deforestation file of PRODES data (a ZIP file is expected);
+ - Provide the last PRODES mask that used to clear process. Has two ways (configure on options.sh):
+    - Download the yearly_deforestation file of PRODES data, ZIP file is expected, and set the BYPASS_IMPORT_MASK=false;
+    - Or manually provide one table with the PRODES mask and set the BYPASS_IMPORT_MASK=true;
  - Run the entry point script (start_process.sh).
 
 After that, consult the two new files generated in the root directory, along with these scripts.
