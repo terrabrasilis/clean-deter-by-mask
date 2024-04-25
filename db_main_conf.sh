@@ -19,6 +19,9 @@ PRODES_TABLE=$SHP_PRODES"_"$CURRENT_PRODES_YEAR
 TABLE_TO_CLEAN="sdr_alerta_main" # DETER AMZ - PRODUCTION
 #TABLE_TO_CLEAN="sdr_alerta" # DETER CERRADO - PRODUCTION
 
+# the original output table
+DETER_ORIGINAL_TABLE="sdr_alerta"
+
 # name of column used to mark rows as removable
 TABLE_TO_CLEAN_KEY="object_id" # DETER AMZ - PRODUCTION
 #TABLE_TO_CLEAN_KEY="object_id" # DETER CERRADO - PRODUCTION
