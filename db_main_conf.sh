@@ -39,7 +39,7 @@ AREA_COLUMN="area" # DETER AMZ - PRODUCTION
 #AREA_COLUMN="area" # DETER CERRADO - PRODUCTION
 
 # the result table to use as a mask into production
-RESULT_MASK_TABLE=$TABLE_TO_CLEAN"_mask_"$CURRENT_PRODES_YEAR
+RESULT_MASK_TABLE=$DETER_ORIGINAL_TABLE"_mask_"$CURRENT_PRODES_YEAR
 
 # used to store the data that will be clean (terrabrasilis only)
 HISTORY_TABLE="deter_history"

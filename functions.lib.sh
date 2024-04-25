@@ -95,7 +95,7 @@ moveResultsToTargetTables(){
   # ------------------------------------------------------------------------------------------
   # copy the alerts to the removables table (sdr_alerta_removables_YYYY).
   INPUT_DATA=$(mountQueryFractions " " "<=" "$DIFF_RULE_2" "SELECT" "$TABLE_TO_CLEAN_COLS")
-  REMOVABLES="INSERT INTO "$TABLE_TO_CLEAN"_removables_$CURRENT_PRODES_YEAR ($TABLE_TO_CLEAN_COLS) $INPUT_DATA"
+  REMOVABLES="INSERT INTO "$DETER_ORIGINAL_TABLE"_removables_$CURRENT_PRODES_YEAR ($TABLE_TO_CLEAN_COLS) $INPUT_DATA"
   execQuery "$REMOVABLES"
   # delete the alerts of the temporary table (sdr_alerta_tmp).
   DELETE_FROM=$(mountQueryFractions " " "<=" "$DIFF_RULE_2" "DELETE" " ")
@@ -125,7 +125,7 @@ moveResultsToTargetTables(){
   # ------------------------------------------------------------------------------------------
   # copy the alerts to the removables table (sdr_alerta_removables_YYYY).
   INPUT_DATA="SELECT $TABLE_TO_CLEAN_COLS FROM "$TABLE_TO_CLEAN"_tmp"
-  REMOVABLES="INSERT INTO "$TABLE_TO_CLEAN"_removables_$CURRENT_PRODES_YEAR ($TABLE_TO_CLEAN_COLS) $INPUT_DATA"
+  REMOVABLES="INSERT INTO "$DETER_ORIGINAL_TABLE"_removables_$CURRENT_PRODES_YEAR ($TABLE_TO_CLEAN_COLS) $INPUT_DATA"
   execQuery "$REMOVABLES"
   # delete the alerts of the temporary table (sdr_alerta_tmp).
   DELETE_FROM="DELETE FROM "$TABLE_TO_CLEAN"_tmp"
