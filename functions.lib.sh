@@ -93,9 +93,9 @@ moveResultsToTargetTables(){
   
   # When the difference area is less than or equal to 30% of the original alert.
   # ------------------------------------------------------------------------------------------
-  # copy the alerts to the removables table (sdr_alerta_removables).
+  # copy the alerts to the removables table (sdr_alerta_removables_YYYY).
   INPUT_DATA=$(mountQueryFractions " " "<=" "$DIFF_RULE_2" "SELECT" "$TABLE_TO_CLEAN_COLS")
-  REMOVABLES="INSERT INTO "$TABLE_TO_CLEAN"_removables ($TABLE_TO_CLEAN_COLS) $INPUT_DATA"
+  REMOVABLES="INSERT INTO "$TABLE_TO_CLEAN"_removables_$CURRENT_PRODES_YEAR ($TABLE_TO_CLEAN_COLS) $INPUT_DATA"
   execQuery "$REMOVABLES"
   # delete the alerts of the temporary table (sdr_alerta_tmp).
   DELETE_FROM=$(mountQueryFractions " " "<=" "$DIFF_RULE_2" "DELETE" " ")
@@ -123,9 +123,9 @@ moveResultsToTargetTables(){
 
   # The remaining alerts in the temporary table are alerts covered by PRODES deforestation and will be moved to the removable table.
   # ------------------------------------------------------------------------------------------
-  # copy the alerts to the removables table (sdr_alerta_removables).
+  # copy the alerts to the removables table (sdr_alerta_removables_YYYY).
   INPUT_DATA="SELECT $TABLE_TO_CLEAN_COLS FROM "$TABLE_TO_CLEAN"_tmp"
-  REMOVABLES="INSERT INTO "$TABLE_TO_CLEAN"_removables ($TABLE_TO_CLEAN_COLS) $INPUT_DATA"
+  REMOVABLES="INSERT INTO "$TABLE_TO_CLEAN"_removables_$CURRENT_PRODES_YEAR ($TABLE_TO_CLEAN_COLS) $INPUT_DATA"
   execQuery "$REMOVABLES"
   # delete the alerts of the temporary table (sdr_alerta_tmp).
   DELETE_FROM="DELETE FROM "$TABLE_TO_CLEAN"_tmp"
@@ -208,6 +208,6 @@ prepareMaskData(){
   CREATE_INDEX="CREATE INDEX "$PRODES_TABLE"_geom_index ON $PRODES_TABLE USING gist (geom gist_geometry_ops_nd) TABLESPACE pg_default;"
   execQuery "$CREATE_INDEX"
   echo "=================================================" >> $LOGFILE
-  echo "========== $PRODES_TABLE table is read ==========" >> $LOGFILE
+  echo "========== $PRODES_TABLE table is ready ==========" >> $LOGFILE
   echo "=================================================" >> $LOGFILE
 }
